@@ -51,6 +51,7 @@ if __name__ == '__main__':
     start_time = time.time()
 
     sim_muaps = []
+    print(steps)
     for sp in tqdm(range(steps), dynamic_ncols=True):
         # cond [num_mus, 6]
         cond = torch.vstack((
@@ -73,6 +74,7 @@ if __name__ == '__main__':
             if args.device == 'cuda':
                 zi = zi.cuda()
             sim = generator.sample(num_mus, cond.float(), cond.device, zi)
+            print(cond.shape)
 
         if args.device == 'cuda':
             sim = sim.permute(0, 2, 3, 1).cpu().detach().numpy()
