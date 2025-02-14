@@ -14,3 +14,7 @@ log/
 figs/
 
 *.jpg
+
+# custom made files
+archive/
+data/
