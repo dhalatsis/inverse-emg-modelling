@@ -27,6 +27,9 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 
+from pathlib import Path
+import glob
+
 # -------------------------------------------------------------------
 # Adjust this import to where your dataset lives
 # from your_module import StaticMuapDataset
@@ -513,9 +516,40 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # 1) Load dataset
-    full_dataset = StaticMuapDataset(args.data_path)  # dict with "muap": [C,H,W], "cond": [6]
-    print(f"Loaded dataset from {args.data_path} with {len(full_dataset)} samples.")
+
+    # ------------------------------------------------------------------
+    # 1) Resolve data_path -> list of .pt files
+    # ------------------------------------------------------------------
+    path = Path(args.data_path)
+
+    if path.is_dir():
+        # Load all .pt files in directory
+        pt_files = sorted(str(p) for p in path.glob("*.pt"))
+    else:
+        # Treat as either a single file or a glob pattern
+        matches = glob.glob(args.data_path)
+        if matches:
+            pt_files = sorted(matches)
+        else:
+            # Fallback: assume it's a single file path that must exist
+            if not path.is_file():
+                raise FileNotFoundError(f"No .pt files found for path: {args.data_path}")
+            pt_files = [str(path)]
+
+    if not pt_files:
+        raise FileNotFoundError(f"No .pt files found for path: {args.data_path}")
+
+    print("Using the following .pt files:")
+    for f in pt_files:
+        print(f"  - {f}")
+
+    # 2) Load dataset (StaticMuapDataset can take a list of paths)
+    full_dataset = StaticMuapDataset(pt_files)
+    print(f"Loaded dataset with {len(full_dataset)} samples from {len(pt_files)} file(s).")
+
+    # StaticMuapDataset returns dict w/ "muap": [H,W,T], "cond": [6]
+    # DataLoader will stack as [B,H,W,T]. We interpret H as channels, W/T as spatial dims.
+
 
     # 2) Train/Val split
     if args.val_split > 0.0:
